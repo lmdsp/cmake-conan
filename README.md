@@ -1,8 +1,11 @@
 # cmake-conan
 
-![Build Status](https://github.com/conan-io/cmake-conan/actions/workflows/cmake_conan.yml/badge.svg)
+![Build Status](https://github.com/conan-io/cmake-conan/actions/workflows/cmake_conan.yml/badge.svg?branch=develop)
 
 CMake wrapper for the Conan C and C++ package manager.
+
+> :warning: **Compatibility with Conan 2.0**: please check for experimental support in 
+the [develop2](https://github.com/conan-io/cmake-conan/tree/develop2) branch.
 
 
 This cmake module allows to launch ``conan install`` from cmake.
@@ -15,11 +18,11 @@ The branches in this repo are:
 You probably want to use a tagged release to ensure controlled upgrades.
 
 You can just clone or grab the *conan.cmake* file and put in in your project.
-Or it can be used in this way. Note the ``v0.16.1`` tag in the URL, change it to point to your desired release:
+Or it can be used in this way. Note the ``0.18.1`` tag in the URL, change it to point to your desired release:
 
 ```cmake
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
 project(FormatOutput CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
@@ -29,9 +32,8 @@ add_definitions("-std=c++11")
 
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
   message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-  file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/v0.16.1/conan.cmake"
+  file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/0.18.1/conan.cmake"
                 "${CMAKE_BINARY_DIR}/conan.cmake"
-                EXPECTED_HASH SHA256=396e16d0f5eabdc6a14afddbcfff62a54a7ee75c6da23f32f7a31bc85db23484
                 TLS_VERIFY ON)
 endif()
 
@@ -66,8 +68,8 @@ and also call to `conan_basic_setup`:
 
 ```cmake
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake) 
-conan_basic_setup(TARGETS) 
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
 ```
 
 Please [check the cmake generator documentation](https://docs.conan.io/en/latest/integrations/build_system/cmake/cmake_generator.html#cmake-generator)
@@ -108,7 +110,7 @@ pass all the arguments that the command supports. Also, you can pass the auto-de
 `conan_cmake_autodetect` in the `SETTINGS` argument.
 
 It can receive as arguments: `UPDATE`, `NO_IMPORTS`, `PATH_OR_REFERENCE`, `REFERENCE`, `REMOTE`,
-`LOCKFILE`, `LOCKFILE_OUT`, `LOCKFILE_NODE_ID`, `INSTALL_FOLDER`, `GENERATOR`, `BUILD` (if this
+`LOCKFILE`, `LOCKFILE_OUT`, `LOCKFILE_NODE_ID`, `INSTALL_FOLDER`, `OUTPUT_FOLDER`, `GENERATOR`, `BUILD` (if this
 parameter takes the `all` value, Conan will build everything from source), `ENV`, `ENV_HOST`,
 `ENV_BUILD`, `OPTIONS_HOST`, `OPTIONS`, `OPTIONS_BUILD`, `PROFILE`, `PROFILE_HOST`, `PROFILE_BUILD`,
 `SETTINGS`, `SETTINGS_HOST`, `SETTINGS_BUILD`. For more information, check [conan
@@ -124,6 +126,24 @@ conan_cmake_install(PATH_OR_REFERENCE .
                     SETTINGS ${settings})
 ```
 
+## conan_cmake_lock_create()
+
+This function is an additional wrapper for the [conan lock
+create](https://docs.conan.io/en/latest/reference/commands/misc/lock.html#conan-lock-create)
+sub-command of conan lock command to enable lockfile based workflows. You can pass all the arguments
+that the command supports. Also, you can pass the auto-detected settings from
+`conan_cmake_autodetect` in the `SETTINGS` argument.
+
+It can receive as arguments: `PATH`, `REFERENCE`, `UPDATE`, `BASE`, `REMOTE`, `LOCKFILE`,
+`LOCKFILE_OUT`, `LOCKFILE_NODE_ID`, `INSTALL_FOLDER`, `GENERATOR`, `BUILD`, `ENV`, `ENV_HOST`,
+`ENV_BUILD`, `OPTIONS`, `OPTIONS_HOST`, `OPTIONS_BUILD`, `PROFILE`, `PROFILE_HOST`, `PROFILE_BUILD`,
+`SETTINGS`, `SETTINGS_HOST`, `SETTINGS_BUILD`. For more information, check [conan lock
+create](https://docs.conan.io/en/latest/reference/commands/misc/lock.html#conan-lock-create)
+documentation.
+
+It will also accept `OUTPUT_QUIET` and `ERROR_QUIET` arguments so that when it runs the `conan
+install` command the output is quiet or the error is bypassed (or both).
+
 ## Using conan_cmake_autodetect() and conan_cmake_install() with Multi Configuration generators
 
 The recommended approach when using Multi Configuration generators like Visual Studio or Xcode is
@@ -132,7 +152,7 @@ looping through the `CMAKE_CONFIGURATION_TYPES` in your _CMakeLists.txt_ and cal
 a Conan multiconfig generator like `cmake_find_package_multi`. Please check the example:
 
 ```cmake
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
 project(FormatOutput CXX)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
@@ -268,9 +288,9 @@ include(conan.cmake)
 conan_cmake_run(CONFIGURATION_TYPES "Release;Debug;RelWithDebInfo")
 ```
 
-Use it to set the different configurations when using multi-configuration generators. The default 
-configurations used for multi-configuration generators are `Debug` and `Release` if the argument 
-`CONFIGURATION_TYPES` is not specified  The build types passed through this argument should exist 
+Use it to set the different configurations when using multi-configuration generators. The default
+configurations used for multi-configuration generators are `Debug` and `Release` if the argument
+`CONFIGURATION_TYPES` is not specified  The build types passed through this argument should exist
 in *settings.yml*.
 
 ### PROFILE
@@ -410,6 +430,18 @@ Example usage:
 conan_check(VERSION 1.0.0 REQUIRED)
 ```
 
+### conan_version()
+
+Returns the Conan client version.
+
+Example usage:
+```
+conan_version(CONAN_VERSION)
+if(${CONAN_VERSION} VERSION_LESS "2.0.0")
+  ...
+endif()
+```
+
 ### conan_add_remote()
 
 Adds a remote.
@@ -433,6 +465,26 @@ Example usage:
 conan_config_install(ITEM ./config.git TYPE git SOURCE src TARGET dst VERIFY_SSL False)
 ```
 
+### conan_cmake_profile()
+
+This function will create a profile with the same arguments as the section of the [profile](https://docs.conan.io/en/latest/reference/profiles.html).
+
+```cmake
+conan_cmake_profile(FILEPATH      "${CMAKE_BINARY_DIR}/profile"
+                    SETTINGS      os=Windows
+                                  arch=x86_64
+                                  build_type=Debug
+                                  compiler=msvc
+                                  compiler.version=192
+                                  compiler.runtime=dynamic
+                                  compiler.runtime_type=Debug
+                                  compiler.cppstd=14
+                    OPTIONS       fmt:shared=True
+                                  fmt:header_only=False
+                    CONF          "tools.cmake.cmaketoolchain:generator=Visual Studio 16 2019"
+                                  "tools.cmake.cmaketoolchain:toolset_arch=x64"
+                    TOOL_REQUIRES cmake/3.16.3)
+```
 
 ## Creating packages
 
